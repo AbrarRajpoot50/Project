@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Travel Planner</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Travel Planner</h1>
+
+      <!-- Add Destination Form -->
+      <form id="destination-form">
+        <input id="destination-name" placeholder="Destination" required />
+        <input id="continent" placeholder="Continent" required />
+        <input id="budget" type="number" placeholder="Budget" />
+        <textarea id="must-see" placeholder="Must-see places"></textarea>
+        <button type="submit">Add Destination</button>
+      </form>
+
+      <!-- Filter Section -->
+      <div id="filter-section">
+        <select id="filter-continent">
+          <option value="">All Continents</option>
+          <option value="Asia">Asia</option>
+          <option value="Europe">Europe</option>
+          <option value="Africa">Africa</option>
+          <option value="North America">North America</option>
+          <option value="South America">South America</option>
+          <option value="Australia">Australia</option>
+          <option value="Antarctica">Antarctica</option>
+        </select>
+      </div>
+
+      <!-- Destinations List -->
+      <ul id="destination-list"></ul>
+
+      <!-- Update Modal -->
+      <div id="update-modal" class="modal">
+        <div class="modal-content">
+          <span class="close" onclick="closeModal()">&times;</span>
+          <h2>Update Destination</h2>
+          <form id="update-form">
+            <input id="update-name" placeholder="Destination Name" required />
+            <input id="update-budget" type="number" placeholder="Budget" />
+            <textarea
+              id="update-must-see"
+              placeholder="Must-see places"
+            ></textarea>
+            <textarea id="update-notes" placeholder="Notes"></textarea>
+            <button type="submit">Update</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
