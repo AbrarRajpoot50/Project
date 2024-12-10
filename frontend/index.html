@@ -14,13 +14,14 @@
       <form id="destination-form">
         <input id="destination-name" placeholder="Destination" required />
         <input id="continent" placeholder="Continent" required />
-        <input id="budget" type="number" placeholder="Budget" />
+        <input id="budget" type="number" placeholder="Budget" required />
         <textarea id="must-see" placeholder="Must-see places"></textarea>
         <button type="submit">Add Destination</button>
       </form>
 
       <!-- Filter Section -->
       <div id="filter-section">
+        <input id="search-bar" type="text" placeholder="Search by name..." />
         <select id="filter-continent">
           <option value="">All Continents</option>
           <option value="Asia">Asia</option>
@@ -31,6 +32,16 @@
           <option value="Australia">Australia</option>
           <option value="Antarctica">Antarctica</option>
         </select>
+        <button id="apply-filters">Apply Filters</button>
+      </div>
+
+      <!-- Reporting Section -->
+      <div id="report-section">
+        <h2>Report</h2>
+        <p>Total Destinations: <span id="total-destinations">0</span></p>
+        <p>Visited: <span id="visited-destinations">0</span></p>
+        <p>Unvisited: <span id="unvisited-destinations">0</span></p>
+        <p>Total Budget: $<span id="budget-summary">0</span></p>
       </div>
 
       <!-- Destinations List -->
@@ -38,23 +49,187 @@
 
       <!-- Update Modal -->
       <div id="update-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content1">
           <span class="close" onclick="closeModal()">&times;</span>
           <h2>Update Destination</h2>
           <form id="update-form">
             <input id="update-name" placeholder="Destination Name" required />
             <input id="update-budget" type="number" placeholder="Budget" />
-            <textarea
-              id="update-must-see"
-              placeholder="Must-see places"
-            ></textarea>
-            <textarea id="update-notes" placeholder="Notes"></textarea>
+            <textarea id="update-must-see" placeholder="Must-see places"></textarea>
             <button type="submit">Update</button>
           </form>
         </div>
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+      const API_URL = "http://localhost:3000";
+    
+      // DOM Elements
+      const destinationForm = document.getElementById("destination-form");
+      const destinationList = document.getElementById("destination-list");
+      const searchBar = document.getElementById("search-bar");
+      const filterContinent = document.getElementById("filter-continent");
+      const applyFiltersBtn = document.getElementById("apply-filters");
+      const reportSection = {
+        totalDestinations: document.getElementById("total-destinations"),
+        visitedDestinations: document.getElementById("visited-destinations"),
+        unvisitedDestinations: document.getElementById("unvisited-destinations"),
+        budgetSummary: document.getElementById("budget-summary"),
+      };
+    
+      let destinations = []; // Local cache to manage destinations
+    
+      // Fetch and display destinations (with optional filters)
+      const fetchDestinations = async () => {
+        const search = searchBar.value.trim();
+        const continent = filterContinent.value;
+    
+        let query = "?";
+        if (search) query += `search=${search}&`;
+        if (continent) query += `continent=${continent}`;
+    
+        const response = await fetch(`${API_URL}/destinations${query}`);
+        destinations = await response.json();
+        renderDestinations(destinations);
+        updateReport(destinations); // Dynamically update the report based on filtered destinations
+      };
+    
+      // Update reporting section dynamically
+      const updateReport = (destinations) => {
+        const totalDestinations = destinations.length;
+        const visitedDestinations = destinations.filter((d) => d.visited).length;
+        const unvisitedDestinations = totalDestinations - visitedDestinations;
+        const budgetSummary = destinations.reduce(
+          (sum, d) => sum + (d.budget || 0),
+          0
+        );
+    
+        reportSection.totalDestinations.textContent = totalDestinations;
+        reportSection.visitedDestinations.textContent = visitedDestinations;
+        reportSection.unvisitedDestinations.textContent = unvisitedDestinations;
+        reportSection.budgetSummary.textContent = budgetSummary.toFixed(2);
+      };
+    
+      // Render destinations dynamically
+      const renderDestinations = (destinations) => {
+        destinationList.innerHTML = "";
+        destinations.forEach((destination) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <strong>${destination.destination}</strong> (${destination.continent})
+            <p>Budget: $${destination.budget}</p>
+            <p>Must-see: ${destination.mustSee || "N/A"}</p>
+            <button onclick="markVisited(${destination.id})" ${
+            destination.visited ? "disabled" : ""
+          }>${destination.visited ? "Visited" : "Mark as Visited"}</button>
+            <button onclick="editDestination(${destination.id})">Edit</button>
+            <button onclick="deleteDestination(${destination.id})">Delete</button>
+          `;
+          destinationList.appendChild(li);
+        });
+      };
+    
+      // Add destination
+      destinationForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+    
+        const destination = {
+          destination: document.getElementById("destination-name").value.trim(),
+          continent: document.getElementById("continent").value.trim(),
+          budget: parseFloat(document.getElementById("budget").value.trim()),
+          mustSee: document.getElementById("must-see").value.trim(),
+        };
+    
+        const response = await fetch(`${API_URL}/destinations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(destination),
+        });
+    
+        if (response.ok) {
+          destinationForm.reset();
+          fetchDestinations();
+        } else {
+          alert("Error adding destination!");
+        }
+      });
+    
+      // Mark destination as visited
+      const markVisited = async (id) => {
+        const response = await fetch(`${API_URL}/destinations/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visited: true }),
+        });
+    
+        if (response.ok) {
+          fetchDestinations();
+        }
+      };
+    
+      // Delete destination
+      const deleteDestination = async (id) => {
+        const response = await fetch(`${API_URL}/destinations/${id}`, {
+          method: "DELETE",
+        });
+    
+        if (response.ok) {
+          fetchDestinations();
+        }
+      };
+    
+      // Edit destination
+      const editDestination = (id) => {
+        const destination = destinations.find((d) => d.id === id);
+    
+        if (!destination) return;
+    
+        // Populate modal form with existing data
+        const modal = document.getElementById("update-modal");
+        document.getElementById("update-name").value = destination.destination;
+        document.getElementById("update-budget").value = destination.budget || "";
+        document.getElementById("update-must-see").value = destination.mustSee || "";
+    
+        modal.style.display = "block";
+    
+        const updateForm = document.getElementById("update-form");
+        updateForm.onsubmit = async (e) => {
+          e.preventDefault();
+    
+          const updatedDestination = {
+            destination: document.getElementById("update-name").value.trim(),
+            budget: parseFloat(document.getElementById("update-budget").value.trim()),
+            mustSee: document.getElementById("update-must-see").value.trim(),
+          };
+    
+          const response = await fetch(`${API_URL}/destinations/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedDestination),
+          });
+    
+          if (response.ok) {
+            modal.style.display = "none";
+            fetchDestinations();
+          } else {
+            alert("Error updating destination!");
+          }
+        };
+      };
+    
+      // Close modal
+      const closeModal = () => {
+        document.getElementById("update-modal").style.display = "none";
+      };
+    
+      // Apply filters on button click
+      applyFiltersBtn.addEventListener("click", fetchDestinations);
+    
+      // Initialize app
+      fetchDestinations();
+    </script>
+    
+    
   </body>
 </html>
