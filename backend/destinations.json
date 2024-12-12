@@ -9,10 +9,18 @@
   },
   {
     "id": 1733814404960,
-    "visited": false,
+    "visited": true,
     "destination": "maldives",
     "continent": "asia",
     "budget": 1200,
     "mustSee": "ranse, saee"
+  },
+  {
+    "id": 1734027114892,
+    "visited": false,
+    "destination": "werw",
+    "continent": "we",
+    "budget": 12,
+    "mustSee": "qweq"
   }
 ]

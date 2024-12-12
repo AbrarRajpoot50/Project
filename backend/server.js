@@ -47,30 +47,7 @@ app.get("/destinations", (req, res) => {
 
   res.json(filteredDestinations);
 });
-app.get("/destination", (req, res) => {
-  const destinations = readFile(destinationsFile);
-  const { search = "", continent = "" } = req.query;
 
-  console.log("Query Parameters:", { search, continent });
-
-  let filteredDestinations = destinations;
-
-  if (search) {
-    filteredDestinations = filteredDestinations.filter((d) =>
-      d.destination.toLowerCase().includes(search.toLowerCase())
-    );
-    console.log("After Search Filter:", filteredDestinations);
-  }
-
-  if (continent) {
-    filteredDestinations = filteredDestinations.filter(
-      (d) => d.continent.toLowerCase() === continent.toLowerCase()
-    );
-    console.log("After Continent Filter:", filteredDestinations);
-  }
-
-  res.json(filteredDestinations);
-});
 app.post("/destinations", validateDestination, (req, res) => {
   const destinations = readFile(destinationsFile);
   
@@ -85,19 +62,31 @@ app.post("/destinations", validateDestination, (req, res) => {
   res.status(201).json(newDestination);
 });
 
-app.put("/destinations/:id", validateDestination, (req, res) => {
+app.put("/destinations/:id", (req, res) => {
   const destinations = readFile(destinationsFile);
+
   const destinationIndex = destinations.findIndex(
-    (d) => d.id === parseInt(req.params.id)
+    (d) => d.id === parseInt(req.params.id) // Ensure ID comparison is consistent
   );
-  if (destinationIndex === -1)
+
+  if (destinationIndex === -1) {
     return res.status(404).send("Destination not found");
+  }
+
+  // Merge the updates into the existing destination
   destinations[destinationIndex] = {
     ...destinations[destinationIndex],
     ...req.body,
   };
-  writeFile(destinationsFile, destinations);
-  res.json(destinations[destinationIndex]);
+
+  // Write the updated destinations back to the file
+  try {
+    writeFile(destinationsFile, destinations);
+    res.json(destinations[destinationIndex]);
+  } catch (error) {
+    console.error("Error writing to file:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.delete("/destinations/:id", (req, res) => {
