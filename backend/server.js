@@ -1,20 +1,28 @@
-const express = require("express");
-const fs = require("fs");
-const cors = require("cors");
-const app = express();
-const path = require("path");
 
+import express from "express";
+import cors from "cors";
+import { MongoClient, ObjectId } from "mongodb";
+
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-const destinationsFile = path.resolve(
-  path.join(__dirname, "destinations.json")
-);
+const mongoUrl = "mongodb://localhost:27017";
+const dbName = "travelApp";
+const collectionName = "destinations";
+let db, destinationsCollection;
 
-// Helper to read/write JSON files
-const readFile = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
-const writeFile = (file, data) =>
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+// Connect to MongoDB
+MongoClient.connect(mongoUrl, { useUnifiedTopology: true })
+  .then((client) => {
+    db = client.db(dbName);
+    destinationsCollection = db.collection(collectionName);
+    console.log("Connected to MongoDB");
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB", err);
+    process.exit(1);
+  });
 
 // Middleware for validation
 const validateDestination = (req, res, next) => {
@@ -26,90 +34,82 @@ const validateDestination = (req, res, next) => {
 };
 
 // CRUD for Destinations
-app.get("/destinations", (req, res) => {
-  const destinations = readFile(destinationsFile);
-  
-  // Search functionality
-  const { search, continent } = req.query;
-  let filteredDestinations = destinations;
-
-  if (search) {
-    filteredDestinations = filteredDestinations.filter((d) =>
-      d.destination.toLowerCase().includes(search.toLowerCase())
-    );
-  }
-
-  if (continent) {
-    filteredDestinations = filteredDestinations.filter(
-      (d) => d.continent.toLowerCase() === continent.toLowerCase()
-    );
-  }
-
-  res.json(filteredDestinations);
-});
-
-app.post("/destinations", validateDestination, (req, res) => {
-  const destinations = readFile(destinationsFile);
-  
-  // Integrity Check: Ensure unique destination names
-  if (destinations.some((d) => d.destination === req.body.destination)) {
-    return res.status(409).send("Destination already exists.");
-  }
-
-  const newDestination = { id: Date.now(), visited: false, ...req.body };
-  destinations.push(newDestination);
-  writeFile(destinationsFile, destinations);
-  res.status(201).json(newDestination);
-});
-
-app.put("/destinations/:id", (req, res) => {
-  const destinations = readFile(destinationsFile);
-
-  const destinationIndex = destinations.findIndex(
-    (d) => d.id === parseInt(req.params.id) // Ensure ID comparison is consistent
-  );
-
-  if (destinationIndex === -1) {
-    return res.status(404).send("Destination not found");
-  }
-
-  // Merge the updates into the existing destination
-  destinations[destinationIndex] = {
-    ...destinations[destinationIndex],
-    ...req.body,
-  };
-
-  // Write the updated destinations back to the file
+app.get("/destinations", async (req, res) => {
   try {
-    writeFile(destinationsFile, destinations);
-    res.json(destinations[destinationIndex]);
-  } catch (error) {
-    console.error("Error writing to file:", error);
-    res.status(500).send("Internal Server Error");
+    const { search, continent } = req.query;
+    let query = {};
+    if (search) {
+      query.destination = { $regex: search, $options: "i" };
+    }
+    if (continent) {
+      query.continent = { $regex: `^${continent}$`, $options: "i" };
+    }
+    const destinations = await destinationsCollection.find(query).toArray();
+    res.json(destinations);
+  } catch (err) {
+    res.status(500).send("Error fetching destinations");
   }
 });
 
-app.delete("/destinations/:id", (req, res) => {
-  const destinations = readFile(destinationsFile);
-  const updatedDestinations = destinations.filter(
-    (d) => d.id !== parseInt(req.params.id)
-  );
-  writeFile(destinationsFile, updatedDestinations);
-  res.status(204).send();
+app.post("/destinations", validateDestination, async (req, res) => {
+  try {
+    // Integrity Check: Ensure unique destination names
+    const exists = await destinationsCollection.findOne({ destination: req.body.destination });
+    if (exists) {
+      return res.status(409).send("Destination already exists.");
+    }
+    const newDestination = { visited: false, ...req.body };
+    const result = await destinationsCollection.insertOne(newDestination);
+    res.status(201).json({ ...newDestination, _id: result.insertedId });
+  } catch (err) {
+    res.status(500).send("Error adding destination");
+  }
+});
+
+app.put("/destinations/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await destinationsCollection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: req.body },
+      { returnDocument: "after" }
+    );
+    if (!result.value) {
+      return res.status(404).send("Destination not found");
+    }
+    res.json(result.value);
+  } catch (err) {
+    res.status(500).send("Error updating destination");
+  }
+});
+
+app.delete("/destinations/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await destinationsCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).send("Destination not found");
+    }
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).send("Error deleting destination");
+  }
 });
 
 // Reporting - Summary of all destinations
-app.get("/report", (req, res) => {
-  const destinations = readFile(destinationsFile);
-
-  const report = {
-    totalDestinations: destinations.length,
-    visited: destinations.filter((d) => d.visited).length,
-    unvisited: destinations.filter((d) => !d.visited).length,
-    budgetSummary: destinations.reduce((sum, d) => sum + parseFloat(d.budget || 0), 0),
-  };
-
-  res.json(report);
+app.get("/report", async (req, res) => {
+  try {
+    const destinations = await destinationsCollection.find({}).toArray();
+    const report = {
+      totalDestinations: destinations.length,
+      visited: destinations.filter((d) => d.visited).length,
+      unvisited: destinations.filter((d) => !d.visited).length,
+      budgetSummary: destinations.reduce((sum, d) => sum + parseFloat(d.budget || 0), 0),
+    };
+    res.json(report);
+  } catch (err) {
+    res.status(500).send("Error generating report");
+  }
 });
 
 // Start the server
