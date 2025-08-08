@@ -5,8 +5,7 @@ Module Code: B9IS123_2425_TMD1S
 Module Lecturer: Paul Laird  
 Programme/Cohort: MSc Information Systems with Computing  
 Method of Assessment: Project/Report  
-Percentage (%) Weighting: 70%  
-Individual/Group: Individual  
+
 
 Name: Muhammad Abrar  
 Student Id: 20037095  
