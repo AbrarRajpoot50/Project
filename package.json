@@ -1,20 +1,28 @@
 {
-  "name": "library-management-system",
+  "name": "travel-planner",
   "version": "1.0.0",
-  "description": "",
+  "description": "A travel planner application with React frontend and Express backend",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node backend/server.js"
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon backend/server.js",
+    "client": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "start": "node backend/server.js",
+    "install-client": "cd frontend && npm install",
+    "heroku-postbuild": "npm run install-client && npm run build"
   },
-  "keywords": [],
+  "keywords": ["travel", "planner", "react", "express", "mongodb"],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "mongoose": "^8.16.5",
-    "nodemon": "^3.1.7"
+    "mongoose": "^8.16.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7",
+    "concurrently": "^8.2.2"
   }
 }

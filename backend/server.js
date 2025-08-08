@@ -1,6 +1,6 @@
-import express from "express";
-import cors from "cors";
-import { MongoClient, ObjectId } from "mongodb";
+const express = require('express');
+const cors = require('cors');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 app.use(cors());
@@ -27,7 +27,7 @@ MongoClient.connect(mongoUrl, { useUnifiedTopology: true })
 const validateDestination = (req, res, next) => {
   const { destination, continent, budget } = req.body;
   if (!destination || !continent || isNaN(parseFloat(budget))) {
-    return res.status(400).send("Invalid destination data.");
+    return res.status(400).json({ error: "Invalid destination data. Please provide destination, continent, and valid budget." });
   }
   next();
 };
@@ -46,7 +46,8 @@ app.get("/destinations", async (req, res) => {
     const destinations = await destinationsCollection.find(query).toArray();
     res.json(destinations);
   } catch (err) {
-    res.status(500).send("Error fetching destinations");
+    console.error("Error fetching destinations:", err);
+    res.status(500).json({ error: "Error fetching destinations" });
   }
 });
 
@@ -55,30 +56,37 @@ app.post("/destinations", validateDestination, async (req, res) => {
     // Integrity Check: Ensure unique destination names
     const exists = await destinationsCollection.findOne({ destination: req.body.destination });
     if (exists) {
-      return res.status(409).send("Destination already exists.");
+      return res.status(409).json({ error: "Destination already exists." });
     }
-    const newDestination = { visited: false, ...req.body };
+    const newDestination = { 
+      visited: false, 
+      ...req.body,
+      createdAt: new Date()
+    };
     const result = await destinationsCollection.insertOne(newDestination);
     res.status(201).json({ ...newDestination, _id: result.insertedId });
   } catch (err) {
-    res.status(500).send("Error adding destination");
+    console.error("Error adding destination:", err);
+    res.status(500).json({ error: "Error adding destination" });
   }
 });
 
 app.put("/destinations/:id", async (req, res) => {
   try {
     const id = req.params.id;
+    const updateData = { ...req.body, updatedAt: new Date() };
     const result = await destinationsCollection.findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: req.body },
+      { $set: updateData },
       { returnDocument: "after" }
     );
     if (!result.value) {
-      return res.status(404).send("Destination not found");
+      return res.status(404).json({ error: "Destination not found" });
     }
     res.json(result.value);
   } catch (err) {
-    res.status(500).send("Error updating destination");
+    console.error("Error updating destination:", err);
+    res.status(500).json({ error: "Error updating destination" });
   }
 });
 
@@ -87,11 +95,12 @@ app.delete("/destinations/:id", async (req, res) => {
     const id = req.params.id;
     const result = await destinationsCollection.deleteOne({ _id: new ObjectId(id) });
     if (result.deletedCount === 0) {
-      return res.status(404).send("Destination not found");
+      return res.status(404).json({ error: "Destination not found" });
     }
     res.status(204).send();
   } catch (err) {
-    res.status(500).send("Error deleting destination");
+    console.error("Error deleting destination:", err);
+    res.status(500).json({ error: "Error deleting destination" });
   }
 });
 
@@ -104,12 +113,22 @@ app.get("/report", async (req, res) => {
       visited: destinations.filter((d) => d.visited).length,
       unvisited: destinations.filter((d) => !d.visited).length,
       budgetSummary: destinations.reduce((sum, d) => sum + parseFloat(d.budget || 0), 0),
+      averageBudget: destinations.length > 0 ? destinations.reduce((sum, d) => sum + parseFloat(d.budget || 0), 0) / destinations.length : 0
     };
     res.json(report);
   } catch (err) {
-    res.status(500).send("Error generating report");
+    console.error("Error generating report:", err);
+    res.status(500).json({ error: "Error generating report" });
   }
 });
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "OK", message: "Travel Planner API is running" });
+});
+
 // Start the server
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+module.exports = app;
