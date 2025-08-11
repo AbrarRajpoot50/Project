@@ -1,6 +1,17 @@
 # Travel Planner Application
 
 
+Primary Refernces:
+
+used LLMs to generate initial readme then updated it accordingly
+also used it for debugging errors and generating genral code snippet and used it accordingly. 
+
+other secondary refernces:
+geeksforgeeks 
+npmjs.com
+
+
+
 Module Title: Programming for Information Systems  
 Module Code: B9IS123_2425_TMD1S  
 Module Lecturer: Paul Laird  
@@ -234,4 +245,5 @@ npm start
 This Travel Planner application demonstrates a complete full-stack web development approach using modern technologies. The React frontend provides an intuitive user interface while the Express.js backend with MongoDB ensures robust data management. The application successfully implements all CRUD operations with additional features like filtering, search, and comprehensive reporting.
 
 The modular architecture makes it easy to extend and maintain, while the responsive design ensures accessibility across all devices. This project showcases proficiency in modern web development practices and technologies.
+
 
