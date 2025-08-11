@@ -94,11 +94,7 @@ Project/
 - `PUT /destinations/:id` - Update an existing destination
 - `DELETE /destinations/:id` - Delete a destination
 
-### Reporting
-- `GET /report` - Get travel statistics and budget summary
 
-### Health Check
-- `GET /health` - API health check
 
 ## Installation and Setup
 
@@ -238,3 +234,4 @@ npm start
 This Travel Planner application demonstrates a complete full-stack web development approach using modern technologies. The React frontend provides an intuitive user interface while the Express.js backend with MongoDB ensures robust data management. The application successfully implements all CRUD operations with additional features like filtering, search, and comprehensive reporting.
 
 The modular architecture makes it easy to extend and maintain, while the responsive design ensures accessibility across all devices. This project showcases proficiency in modern web development practices and technologies.
+
